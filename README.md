@@ -1,23 +1,23 @@
-FIT VUT 2017/18
-School Projects
+# FIT VUT 2017/18
+## School Projects
 
-IZP
+### IZP
 Project1	5/5
 Project2	7/7
 Project3 	10/10
 Documentation	3/4
 
-IUS
+### IUS
 Use Case	4/7
 ERD		16/18
 
-INC
+### INC
 Project1	20/20
 
-IOS
+### IOS
 Project1	15/15
 Project2	10/15
 
-IJC
+### IJC
 Project1	13/15
 Project2	9/15
