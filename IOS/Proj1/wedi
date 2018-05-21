@@ -1,0 +1,99 @@
+#!/bin/sh
+
+POSIXLY_CORRECT=1
+###################### KONTROLA NASTAVENI A DEPENDENCIES ##################
+
+if [ -z "$WEDI_RC" ]; then
+    echo "ERROR WEDI_RC nie je nastaveny" >&2
+    exit 1
+elif [ ! -f "$WEDI_RC" ]; then
+    #vytvori subor aj adresar, ak neexistuje
+    mkdir -p $(dirname "$WEDI_RC") && touch "$WEDI_RC"
+fi
+
+
+if [ $(realpath . > /dev/null 2>&1) ]; then
+  echo "ERROR realpath nie je naistalovany" >&2
+  exit 1
+fi
+
+######################### SPRACOVANIE AGRUMENTOV ##########################
+while getopts "mlb:a:" o; do
+        case ${o} in
+            m) m="true" ;;
+            l) l="true" ;;
+            b) b=${OPTARG} ;;
+            a) a=${OPTARG} ;;
+            *) echo "PARAM ERROR" >&2
+               exit 1
+                ;;
+        esac
+
+done
+
+#ziska posledny argument
+for last; do :; done
+
+if [ ! -z "$last"  ] && [ -d "$last" ]; then
+    directory=`realpath $last`
+
+elif [ "$#" -eq "1" ] && [ -f "$1" ]; then
+    file=`realpath  $last`
+else
+    directory=`pwd`
+fi
+
+
+######################### HLAVNA FUNKCIONALITA ##########################
+
+if [ -z "$file" ]; then
+    edited_in_directory=`grep .$directory/[^/]*$ $WEDI_RC`
+    if [ -n "$m" ]; then
+        files=`grep .$directory/[^/]*$ $WEDI_RC | cut -f 2,3 | sort | uniq -c | sort -n | sed 's/.*\ //'`
+    elif [ -n "$l" ]; then
+        files=`grep .$directory/[^/]*$ $WEDI_RC | cut -f 2,3 | sort | uniq`
+    elif [ -n "$a" ]; then
+        files=`grep .$directory/[^/]*$ $WEDI_RC | awk -v date=$a -F, '{split($0,a,"\t"); if (a[1] >= date) print a[2]}'| sort | uniq`
+    elif [ -n "$b" ]; then
+        files=`grep .$directory/[^/]*$ $WEDI_RC | awk -v date=$b -F, '{split($0,a,"\t"); if (a[1] < date) print a[2]}'| sort | uniq`
+    else # ak nie je zadany ziadny flag ani file
+        files=`grep .$directory/[^/]*$ $WEDI_RC | cut  -f 2,3`
+    fi
+
+    #vypise zoznam suborov
+    if [ -n "$l" ] || [ -n "$a" ] || [ -n "$b" ]; then
+        for line in $files; do
+            if [ -f "$line" ]; then
+                echo "$line"
+           fi
+       done
+       exit 0
+   #zvoli subor pre editaciu, posledny najdeny
+   else
+       for line in $files; do
+           if [ -f "$line" ]; then
+               file=$line
+          fi
+      done
+  fi
+fi
+
+######################### ZAPIS DO LOGU ##########################
+if [ -n "$file" ]; then
+    #vyber editoru
+    if [ -n "$EDITOR" ]; then
+        $EDITOR $file
+    elif [ -n "$VISUAL" ]; then
+        $VISUAL $file
+    else
+        vi $file
+    fi
+    if  [ $? != 0 ]; then
+        return $?
+    fi
+    echo -e "`date +%Y-%m-%d`\t$file" >> $WEDI_RC
+    exit 0
+else
+    echo "ERROR Nanasiel sa subor pre editaciu" >&2
+    exit 1
+fi
